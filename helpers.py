@@ -74,9 +74,11 @@ class Plotter():
         self.model = model
 
     def setup_plot_bf2(self):
-        num_rows, num_cols = 16,8
+        #num_rows, num_cols = 16,8
+        num_rows, num_cols = 8,4
 
-        figure, axes = plt.subplots(num_rows, num_cols, figsize=(26,14))
+        #figure, axes = plt.subplots(num_rows, num_cols, figsize=(26,14))
+        figure, axes = plt.subplots(num_rows, num_cols, figsize=(14,7))
 
         k = 0
         plots = []
@@ -96,3 +98,4 @@ class Plotter():
         for k in range(len(self.plots)):
             self.plots[k].set_data(range(n_input), synthesis[:,k])
         self.figure.canvas.draw()
+        plt.show(block=False)

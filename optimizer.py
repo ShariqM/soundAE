@@ -11,7 +11,6 @@ parser = OptionParser()
 parser.add_option("-l", "--load_filters", action='store_true', dest="load",
                   default=False)
 (opt, args) = parser.parse_args()
-opt.load = True
 
 class Model():
     n_input = 128
@@ -41,10 +40,10 @@ norm_s_op = synthesis_ph.assign(tf.nn.l2_normalize(synthesis_ph, 0))
 learning_rate_ph = tf.placeholder(tf.float32, shape=[])
 optimizer = tf.train.GradientDescentOptimizer(learning_rate_ph).minimize(cost_op)
 
-N = 16000
+N = 4000
 data = construct_data("mammals", N, n_input)
 
-plot_bf  = True
+plot_bf  = True # Use ipython optimizer.py --pylab=tk for remote host, ipython for local
 with tf.Session() as sess:
     sess.run(init_op)
     if opt.load:
@@ -73,7 +72,7 @@ with tf.Session() as sess:
         if (t+1) % 25 == 0:
             save_data(x_batch, x_hat_vals, analysis_vals, synthesis_vals)
             print ("Data saved | Mean(u)=%.2f" % (np.sum(np.mean(np.abs(u_vals), axis=0))))
-        if plot_bf and t % 25 == 0:
+        if plot_bf and t % 1000 == 0:
             plotter.update_plot_bf2(synthesis_vals)
         if t % 5 == 0:
             print ("%d) Cost: %.3f, SNR: %.2fdB" % (t, cost, snr(x_batch, x_hat_vals)))
