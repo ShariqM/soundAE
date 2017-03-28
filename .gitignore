@@ -1,0 +1,5 @@
+.*.swp
+.DS_Store
+data/
+saved/
+__pycache__/
