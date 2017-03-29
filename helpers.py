@@ -4,10 +4,9 @@ import glob
 import pdb
 import matplotlib.pyplot as plt
 
-def get_learning_rate(t):
-    learning_rate = 2e-6
-    #learning_rate = 2e-13
-    bounds = [300 * (2 ** i) for i in range(10)]
+def get_learning_rate_impl(t, start_rate, start_num_iters):
+    learning_rate = start_rate
+    bounds = [start_num_iters * (2 ** i) for i in range(10)]
     for bound in bounds:
         if t < bound:
             break
@@ -124,7 +123,47 @@ class Plotter():
 
     def update_plot(self, synthesis):
         n_input = synthesis.shape[0]
-        for k in range(min(len(self.plots), synthesis.shape[1])):
+        n_plots = min(len(self.plots), synthesis.shape[1])
+        for k in range(n_plots):
             self.plots[k].set_data(range(n_input), synthesis[:,k])
         self.figure.canvas.draw()
         plt.show(block=False)
+
+    def setup_plot_LIF(self):
+        n_filters = self.model.n_filters
+        n_input = self.model.n_input
+
+        num_rows, num_cols = 4,4
+        figure, axes = plt.subplots(num_rows, num_cols, figsize=(14,7))
+
+        k = 0
+        plots = []
+        for j in range(num_cols):
+            for i in range(num_rows):
+                if i % 2 == 0:
+                    axes[i,j].set_title("V")
+                    axes[i,j].set_ylim([-1,100])
+                else:
+                    axes[i,j].set_title("A")
+                    axes[i,j].set_ylim([0,1.1])
+                #axes[i,j].set_title("V" if i % 2 == 0 else "A")
+                plots.append(axes[i,j].plot(np.zeros(n_input))[0])
+                #axes[i,j].set_ylim([-0.4,0.4])
+                #axes[i,j].xaxis.set_visible(False)
+                #axes[i,j].yaxis.set_visible(False)
+        self.figure = figure
+        plt.show(block=False)
+        self.plots = plots
+
+    def update_plot_LIF(self, v_vals, a_vals):
+        n_input = self.model.n_input
+        j,k = 0,0
+        n_plots = min(len(self.plots), v_vals.shape[1])
+        for i in range(n_plots):
+            if i % 2 == 0:
+                self.plots[i].set_data(range(n_input), v_vals[:,k])
+                j = j + 1
+            else:
+                self.plots[i].set_data(range(n_input), a_vals[:,k])
+                k = k + 1
+        self.figure.canvas.draw()

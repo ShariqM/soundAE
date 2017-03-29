@@ -7,7 +7,7 @@ class LIFCell(tf.contrib.rnn.RNNCell):
   """The LIF Cell"""
 
   def __init__(self, num_units, tau_RC=147):
-    self.threshold = tau_RC * 0.9
+    self.threshold = tau_RC * 0.5
     self.tau_RC = tau_RC
     self._num_units = num_units
 
