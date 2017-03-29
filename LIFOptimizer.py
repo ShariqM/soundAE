@@ -19,13 +19,13 @@ parser.add_option("-v", "--visualize_LIF", action='store_true', dest="plot_LIF",
 (opt, args) = parser.parse_args()
 #opt.load = True
 #opt.plot_bf = True
-opt.plot_LIF = False
+opt.plot_LIF = True
 
 class Model():
-    n_input = 2 ** 10
-    n_filter_width = 128
+    n_input = 2 ** 8
+    n_filter_width = 32
     n_filters = 8
-    n_batch_size = 64
+    n_batch_size = 32
     n_runs = 2 ** 16
     Lambda = 0000.0
 
@@ -33,7 +33,7 @@ class Model():
     threshold = 30
 
 def get_learning_rate(t):
-    start_rate = 1e1
+    start_rate = 1e-2
     start_num_iters = 100
     return get_learning_rate_impl(t, start_rate, start_num_iters)
 
@@ -82,6 +82,10 @@ with tf.Session() as sess:
     if opt.plot_bf:
         plotter.setup_plot()
     if opt.plot_LIF:
+        figure, axes = plt.subplots(1,1)
+        p1 = axes.plot(np.zeros(n_input))[0]
+        p2 = axes.plot(np.zeros(n_input))[0]
+        axes.set_ylim([-1.1, 1.1])
         plotter.setup_plot_LIF()
     print ("Setup for runs")
 
@@ -96,10 +100,9 @@ with tf.Session() as sess:
             sess.run([v_ph, a_ph, x_hat_ph, cost_op, optimizer], feed_dict)
 
         if opt.plot_LIF:
-            plt.figure()
-            plt.plot(x_batch[0,:,0])
-            plt.plot(x_hat_vals[0,:,0], linestyle='--')
-            plt.show(block=False)
+            p1.set_data(range(n_input), x_batch[0,:,0])
+            p2.set_data(range(n_input), x_hat_vals[0,:,0])
+            figure.canvas.draw()
             plotter.update_plot_LIF(v_vals[0,:,:], a_vals[0,:,:])
 
         #analysis_vals, synthesis_vals, u_vals, x_hat_vals, cost, _ = \
@@ -107,9 +110,9 @@ with tf.Session() as sess:
                 #feed_dict=feed_dict)
 
         # Norm ?
-        if (t+1) % 25 == 0:
-            save_data_conv(x_batch, x_hat_vals, analysis_vals, synthesis_vals)
-            print ("Data saved | Mean(u)=%.2f" % (np.mean(np.abs(u_vals))))
+        #if (t+1) % 25 == 0:
+            #save_data_conv(x_batch, x_hat_vals, analysis_vals, synthesis_vals)
+            #print ("Data saved | Mean(u)=%.2f" % (np.mean(np.abs(u_vals))))
         if opt.plot_bf and t % 50 == 0:
             plotter.update_plot(synthesis_vals[:,:,0])
         if True or t % 5 == 0:
