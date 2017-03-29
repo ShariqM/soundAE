@@ -19,7 +19,7 @@ parser.add_option("-v", "--visualize_LIF", action='store_true', dest="plot_LIF",
 (opt, args) = parser.parse_args()
 #opt.load = True
 #opt.plot_bf = True
-opt.plot_LIF = True
+opt.plot_LIF = False
 
 class Model():
     n_input = 2 ** 10
@@ -29,8 +29,11 @@ class Model():
     n_runs = 2 ** 16
     Lambda = 0000.0
 
+    tau_RC = 147
+    threshold = 30
+
 def get_learning_rate(t):
-    start_rate = 1e-15
+    start_rate = 1e1
     start_num_iters = 100
     return get_learning_rate_impl(t, start_rate, start_num_iters)
 
@@ -53,7 +56,7 @@ auto_encoder = ConvAutoEncoder(model)
 u_ph = auto_encoder.encode(x_ph)
 # LIF
 print ("LIF")
-cell_ph = LIFCell(n_filters)
+cell_ph = LIFCell(n_filters, model)
 output_ph, _ = tf.nn.dynamic_rnn(cell_ph, u_ph, dtype=tf.float32)
 v_ph, a_ph = array_ops.split(output_ph, 2, axis=2)
 # Decode
@@ -84,27 +87,26 @@ with tf.Session() as sess:
 
     x_batch = np.zeros((n_batch_size, n_input))
     for t in range(model.n_runs):
-        x_batch = construct_batch(n_input, n_filter_width, n_batch_size)
+        x_batch = construct_batch(n_input, n_filter_width, n_batch_size, norm=True)
 
         feed_dict = {x_ph: x_batch, x_target_ph: x_batch, \
                      learning_rate_ph: get_learning_rate(t)}
 
-        print ("Running session...")
-        v_vals, a_vals, x_hat_vals = sess.run([v_ph, a_ph, x_hat_ph], feed_dict)
-        plt.plot(x_batch[0,:,0])
-        plt.plot(x[0,:,0], linestyle='--')
-        plt.show()
-        print ("Updating Plot...")
+        v_vals, a_vals, x_hat_vals, cost, _ = \
+            sess.run([v_ph, a_ph, x_hat_ph, cost_op, optimizer], feed_dict)
+
         if opt.plot_LIF:
+            plt.figure()
+            plt.plot(x_batch[0,:,0])
+            plt.plot(x_hat_vals[0,:,0], linestyle='--')
+            plt.show(block=False)
             plotter.update_plot_LIF(v_vals[0,:,:], a_vals[0,:,:])
-        pdb.set_trace()
 
         #analysis_vals, synthesis_vals, u_vals, x_hat_vals, cost, _ = \
             #sess.run([analysis_ph, synthesis_ph, u_ph, x_hat_ph, cost_op, optimizer], \
                 #feed_dict=feed_dict)
 
         # Norm ?
-        continue
         if (t+1) % 25 == 0:
             save_data_conv(x_batch, x_hat_vals, analysis_vals, synthesis_vals)
             print ("Data saved | Mean(u)=%.2f" % (np.mean(np.abs(u_vals))))

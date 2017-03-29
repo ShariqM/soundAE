@@ -23,7 +23,7 @@ def snr(x_batch, x_hat_vals):
     snr = 10 * np.log10(var/mse)
     return snr
 
-def construct_batch(n_input, n_filter_width, n_batch_size):
+def construct_batch(n_input, n_filter_width, n_batch_size, norm=False):
     base = 'data/lewicki_audiodata'
     wav_files = glob.glob('%s/mammals/*.wav' % base)
 
@@ -33,7 +33,8 @@ def construct_batch(n_input, n_filter_width, n_batch_size):
         Fs, x_raw = wavfile.read(wfile)
         start = np.random.randint(x_raw.shape[0] - n_input)
         x_batch[i,:,0] = x_raw[start:start+n_input]
-        #x_batch[i,:,0] /= np.max(np.abs(x_batch[i,:,0]))
+        if norm:
+            x_batch[i,:,0] /= np.max(np.abs(x_batch[i,:,0]))
     return x_batch
 
 def construct_data(source, N, sz):
@@ -142,7 +143,7 @@ class Plotter():
             for i in range(num_rows):
                 if i % 2 == 0:
                     axes[i,j].set_title("V")
-                    axes[i,j].set_ylim([-1,100])
+                    axes[i,j].set_ylim([-1, self.model.threshold * 1.1])
                 else:
                     axes[i,j].set_title("A")
                     axes[i,j].set_ylim([0,1.1])
@@ -158,7 +159,7 @@ class Plotter():
     def update_plot_LIF(self, v_vals, a_vals):
         n_input = self.model.n_input
         j,k = 0,0
-        n_plots = min(len(self.plots), v_vals.shape[1])
+        n_plots = min(len(self.plots), v_vals.shape[1] * 2)
         for i in range(n_plots):
             if i % 2 == 0:
                 self.plots[i].set_data(range(n_input), v_vals[:,k])

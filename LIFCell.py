@@ -6,10 +6,10 @@ from tensorflow.python.ops import array_ops
 class LIFCell(tf.contrib.rnn.RNNCell):
   """The LIF Cell"""
 
-  def __init__(self, num_units, tau_RC=147):
-    self.threshold = tau_RC * 0.5
-    self.tau_RC = tau_RC
+  def __init__(self, num_units, model):
     self._num_units = num_units
+    self.tau_RC = model.tau_RC
+    self.threshold = model.threshold
 
   @property
   def state_size(self):
