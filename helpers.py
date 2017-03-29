@@ -103,20 +103,19 @@ class Plotter():
         self.model = model
 
     def setup_plot(self):
-        #num_rows, num_cols = 16,8
-        num_rows, num_cols = 6,4
+        n_rows, n_cols = self.model.n_rows_bf, self.model.n_cols_bf
 
-        #figure, axes = plt.subplots(num_rows, num_cols, figsize=(26,14))
-        figure, axes = plt.subplots(num_rows, num_cols, figsize=(14,7))
+        n_height, n_width = self.model.n_height_bf, self.model.n_width_bf
+        figure, axes = plt.subplots(n_rows, n_cols, figsize=(n_width, n_height))
 
         k = 0
         plots = []
-        for i in range(num_rows):
-            for j in range(num_cols):
+        for i in range(n_rows):
+            for j in range(n_cols):
                 plots.append(axes[i,j].plot(np.zeros(self.model.n_filter_width))[0])
                 axes[i,j].set_ylim([-0.4,0.4])
                 axes[i,j].xaxis.set_visible(False)
-                #axes[i,j].yaxis.set_visible(False)
+                axes[i,j].yaxis.set_visible(False)
                 k = k + 1
         self.figure = figure
         self.plots = plots
@@ -134,13 +133,13 @@ class Plotter():
         n_filters = self.model.n_filters
         n_input = self.model.n_input
 
-        num_rows, num_cols = 4,4
-        figure, axes = plt.subplots(num_rows, num_cols, figsize=(14,7))
+        n_rows, n_cols = 4,4
+        figure, axes = plt.subplots(n_rows, n_cols, figsize=(14,7))
 
         k = 0
         plots = []
-        for j in range(num_cols):
-            for i in range(num_rows):
+        for j in range(n_cols):
+            for i in range(n_rows):
                 if i % 2 == 0:
                     axes[i,j].set_title("V")
                     axes[i,j].set_ylim([-1, self.model.threshold * 1.1])

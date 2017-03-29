@@ -47,7 +47,7 @@ class LIFCell(tf.contrib.rnn.RNNCell):
 
   def __call__(self, inputs, state, scope=None):
     with vs.variable_scope(scope or type(self).__name__):
-      v_bar_t = inputs + tf.exp(-1/self.tau_RC) * state
+      v_bar_t = tf.nn.relu(inputs) + tf.exp(-1/self.tau_RC) * state
       #v_t = v_bar_t
       v_t = self.voltage(v_bar_t)
       a_t = self.spike_activation(v_bar_t)

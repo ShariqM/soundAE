@@ -20,6 +20,16 @@ class Model():
     n_runs = 2 ** 16
     Lambda = 4000.0
 
+    n_rows_bf = 16
+    n_cols_bf = 8
+    n_height_bf = 11
+    n_width_bf = 23
+
+def get_learning_rate(t):
+    start_rate = 2e-9
+    start_num_iters = 1e5
+    return get_learning_rate_impl(t, start_rate, start_num_iters)
+
 model = Model()
 
 n_input, n_filters, n_batch_size, n_runs = model.n_input, model.n_filters, model.n_batch_size, model.n_runs
@@ -73,7 +83,7 @@ with tf.Session() as sess:
         if (t+1) % 25 == 0:
             save_data(x_batch, x_hat_vals, analysis_vals, synthesis_vals)
             print ("Data saved | Mean(u)=%.2f" % (np.sum(np.mean(np.abs(u_vals), axis=0))))
-        if plot_bf and t % 1000 == 0:
+        if plot_bf and t % 500 == 0:
             plotter.update_plot(synthesis_vals)
         if t % 5 == 0:
             print ("%d) Cost: %.3f, SNR: %.2fdB" % (t, cost, snr(x_batch, x_hat_vals)))

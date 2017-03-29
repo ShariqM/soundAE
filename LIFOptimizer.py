@@ -19,13 +19,13 @@ parser.add_option("-v", "--visualize_LIF", action='store_true', dest="plot_LIF",
 (opt, args) = parser.parse_args()
 #opt.load = True
 #opt.plot_bf = True
-opt.plot_LIF = True
+#opt.plot_LIF = True
 
 class Model():
     n_input = 2 ** 8
-    n_filter_width = 32
-    n_filters = 8
-    n_batch_size = 32
+    n_filter_width = 128
+    n_filters = 512
+    n_batch_size = 640
     n_runs = 2 ** 16
     Lambda = 0000.0
 
@@ -33,13 +33,12 @@ class Model():
     threshold = 30
 
 def get_learning_rate(t):
-    start_rate = 1e-2
+    start_rate = 1e-1
     start_num_iters = 100
     return get_learning_rate_impl(t, start_rate, start_num_iters)
 
 model = Model()
 
-print ("Model")
 # Parameters
 n_input, n_filter_width, n_filters, n_batch_size, n_runs = \
     model.n_input, model.n_filter_width, model.n_filters, model.n_batch_size, model.n_runs
@@ -55,18 +54,18 @@ auto_encoder = ConvAutoEncoder(model)
 # Encode
 u_ph = auto_encoder.encode(x_ph)
 # LIF
-print ("LIF")
 cell_ph = LIFCell(n_filters, model)
 output_ph, _ = tf.nn.dynamic_rnn(cell_ph, u_ph, dtype=tf.float32)
 v_ph, a_ph = array_ops.split(output_ph, 2, axis=2)
 # Decode
 x_hat_ph = auto_encoder.decode(a_ph)
 
-# Cost, Optimizatoin
+# Cost, Optimization
 cost_op = tf.reduce_mean(tf.square(x_target_ph - x_hat_ph)) + \
             model.Lambda * tf.reduce_mean(tf.abs(u_ph))
 learning_rate_ph = tf.placeholder(tf.float32, shape=[])
 optimizer = tf.train.GradientDescentOptimizer(learning_rate_ph).minimize(cost_op)
+grad_op  = tf.train.GradientDescentOptimizer(learning_rate_ph).compute_gradients(cost_op)
 
 # ops
 init_op = tf.global_variables_initializer()
@@ -96,9 +95,11 @@ with tf.Session() as sess:
         feed_dict = {x_ph: x_batch, x_target_ph: x_batch, \
                      learning_rate_ph: get_learning_rate(t)}
 
-        v_vals, a_vals, x_hat_vals, cost, _ = \
-            sess.run([v_ph, a_ph, x_hat_ph, cost_op, optimizer], feed_dict)
+        v_vals, a_vals, x_hat_vals, cost, grad_val,  _ = \
+            sess.run([v_ph, a_ph, x_hat_ph, cost_op, grad_op, optimizer], feed_dict)
 
+        print ('Mean Grad Val:', np.mean((np.abs(grad_val[0][0]))))
+        #pdb.set_trace()
         if opt.plot_LIF:
             p1.set_data(range(n_input), x_batch[0,:,0])
             p2.set_data(range(n_input), x_hat_vals[0,:,0])
