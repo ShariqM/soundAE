@@ -15,8 +15,9 @@ parser.add_option("-l", "--load_filters", action='store_true', dest="load",
 class Model():
     n_input = 2 ** 10 # 2 * 14700
     n_filter_width = 128
-    #n_filters = int(0.2 * 128) # Got to 7-8dB no sparsity
-    n_filters = int(0.2 * 128)
+    #n_filters = int(0.2 * 128) # Got to 7-8dB with linear, no sparsity
+    #n_filters = 128
+    n_filters = 8
     n_batch_size = 128
     n_runs = 2 ** 16
     Lambda = 0.0
@@ -65,7 +66,7 @@ with tf.Session() as sess:
             sess.run([analysis_ph, synthesis_ph, u_ph, x_hat_ph, cost_op, optimizer], \
                 feed_dict=feed_dict)
 
-        sess.run(norm_s_op)
+        #sess.run(norm_s_op)
 
         if (t+1) % 25 == 0:
             save_data_conv(x_batch, x_hat_vals, analysis_vals, synthesis_vals)

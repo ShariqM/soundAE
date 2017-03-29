@@ -16,12 +16,12 @@ class ConvAutoEncoder(object):
         self.A = tf.Variable(init_encode_weights(n_filter_width, n_filters), name="analysis_filters")
         self.S = tf.Variable(init_decode_weights(n_filter_width, n_filters), name="synthesis_filters")
 
-
     def get_filters_ph(self):
         return self.A, self.S
 
     def encode(self, x_input):
         u = tf.nn.conv1d(x_input, self.A, 1, padding='SAME')
+        #u = tf.nn.relu(u)
         return u
 
     def decode(self, u):

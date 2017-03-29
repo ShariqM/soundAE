@@ -4,18 +4,6 @@ import glob
 import pdb
 import matplotlib.pyplot as plt
 
-def get_learning_rate(t):
-    learning_rate = 5e-11
-    #learning_rate = 2e-13
-    bounds = [100 * (2 ** i) for i in range(10)]
-    for bound in bounds:
-        if t < bound:
-            break
-        learning_rate *= 0.5
-        if t == bound:
-            print ("Decreasing rate to: ", learning_rate)
-    return learning_rate
-
 def snr(x_batch, x_hat_vals):
     R = x_batch - x_hat_vals
 
@@ -97,6 +85,20 @@ def save_data(x_batch, x_hat_vals, analysis_vals, synthesis_vals):
 def save_data_conv(x_batch, x_hat_vals, analysis_vals, synthesis_vals):
     save_data_impl(x_batch, x_hat_vals, analysis_vals, synthesis_vals)
 
+def get_learning_rate(t):
+    learning_rate = 1e-9
+    #learning_rate = 2e-13
+    bounds = [1000 * (2 ** i) for i in range(10)]
+    for bound in bounds:
+        if t < bound:
+            break
+        learning_rate *= 0.5
+        if t == bound:
+            print ("Decreasing rate to: ", learning_rate)
+    return learning_rate
+
+
+
 class Plotter():
     def __init__(self, model):
         self.model = model
@@ -115,7 +117,7 @@ class Plotter():
                 plots.append(axes[i,j].plot(np.zeros(self.model.n_filter_width))[0])
                 axes[i,j].set_ylim([-0.6,0.6])
                 axes[i,j].xaxis.set_visible(False)
-                axes[i,j].yaxis.set_visible(False)
+                #axes[i,j].yaxis.set_visible(False)
                 k = k + 1
         self.figure = figure
         self.plots = plots
@@ -123,7 +125,7 @@ class Plotter():
 
     def update_plot(self, synthesis):
         n_input = synthesis.shape[0]
-        for k in range(len(self.plots)):
+        for k in range(synthesis.shape[1]):
             self.plots[k].set_data(range(n_input), synthesis[:,k])
         self.figure.canvas.draw()
         plt.show(block=False)
