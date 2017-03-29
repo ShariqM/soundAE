@@ -4,6 +4,18 @@ import glob
 import pdb
 import matplotlib.pyplot as plt
 
+def get_learning_rate(t):
+    learning_rate = 2e-6
+    #learning_rate = 2e-13
+    bounds = [300 * (2 ** i) for i in range(10)]
+    for bound in bounds:
+        if t < bound:
+            break
+        learning_rate *= 0.5
+        if t == bound:
+            print ("Decreasing rate to: ", learning_rate)
+    return learning_rate
+
 def snr(x_batch, x_hat_vals):
     R = x_batch - x_hat_vals
 
@@ -22,6 +34,7 @@ def construct_batch(n_input, n_filter_width, n_batch_size):
         Fs, x_raw = wavfile.read(wfile)
         start = np.random.randint(x_raw.shape[0] - n_input)
         x_batch[i,:,0] = x_raw[start:start+n_input]
+        #x_batch[i,:,0] /= np.max(np.abs(x_batch[i,:,0]))
     return x_batch
 
 def construct_data(source, N, sz):
@@ -85,20 +98,6 @@ def save_data(x_batch, x_hat_vals, analysis_vals, synthesis_vals):
 def save_data_conv(x_batch, x_hat_vals, analysis_vals, synthesis_vals):
     save_data_impl(x_batch, x_hat_vals, analysis_vals, synthesis_vals)
 
-def get_learning_rate(t):
-    learning_rate = 1e-9
-    #learning_rate = 2e-13
-    bounds = [1000 * (2 ** i) for i in range(10)]
-    for bound in bounds:
-        if t < bound:
-            break
-        learning_rate *= 0.5
-        if t == bound:
-            print ("Decreasing rate to: ", learning_rate)
-    return learning_rate
-
-
-
 class Plotter():
     def __init__(self, model):
         self.model = model
@@ -115,7 +114,7 @@ class Plotter():
         for i in range(num_rows):
             for j in range(num_cols):
                 plots.append(axes[i,j].plot(np.zeros(self.model.n_filter_width))[0])
-                axes[i,j].set_ylim([-0.6,0.6])
+                axes[i,j].set_ylim([-0.4,0.4])
                 axes[i,j].xaxis.set_visible(False)
                 #axes[i,j].yaxis.set_visible(False)
                 k = k + 1
@@ -125,7 +124,7 @@ class Plotter():
 
     def update_plot(self, synthesis):
         n_input = synthesis.shape[0]
-        for k in range(synthesis.shape[1]):
+        for k in range(min(len(self.plots), synthesis.shape[1])):
             self.plots[k].set_data(range(n_input), synthesis[:,k])
         self.figure.canvas.draw()
         plt.show(block=False)

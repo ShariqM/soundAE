@@ -10,17 +10,21 @@ from optparse import OptionParser
 parser = OptionParser()
 parser.add_option("-l", "--load_filters", action='store_true', dest="load",
                   default=False)
+parser.add_option("-v", "--visualizer", action='store_true', dest="plot_bf",
+                  default=False)
 (opt, args) = parser.parse_args()
+#opt.load = True
+#opt.plot_bf = True
 
 class Model():
     n_input = 2 ** 10 # 2 * 14700
     n_filter_width = 128
     #n_filters = int(0.2 * 128) # Got to 7-8dB with linear, no sparsity
     #n_filters = 128
-    n_filters = 8
+    n_filters = 2 ** 11
     n_batch_size = 128
     n_runs = 2 ** 16
-    Lambda = 0.0
+    Lambda = 0000.0
 
 model = Model()
 
@@ -44,7 +48,6 @@ norm_s_op = synthesis_ph.assign(tf.nn.l2_normalize(synthesis_ph, 0))
 learning_rate_ph = tf.placeholder(tf.float32, shape=[])
 optimizer = tf.train.GradientDescentOptimizer(learning_rate_ph).minimize(cost_op)
 
-plot_bf = True # Use ipython optimizer.py --pylab=tk for remote host, ipython for local
 with tf.Session() as sess:
     sess.run(init_op)
     if opt.load:
@@ -52,7 +55,7 @@ with tf.Session() as sess:
 
     noise = np.zeros((n_batch_size, n_filters))
     plotter = Plotter(model)
-    if plot_bf:
+    if opt.plot_bf:
         plotter.setup_plot()
 
     x_batch = np.zeros((n_batch_size, n_input))
@@ -71,7 +74,7 @@ with tf.Session() as sess:
         if (t+1) % 25 == 0:
             save_data_conv(x_batch, x_hat_vals, analysis_vals, synthesis_vals)
             print ("Data saved | Mean(u)=%.2f" % (np.mean(np.abs(u_vals))))
-        if plot_bf and t % 25 == 0:
+        if opt.plot_bf and t % 50 == 0:
             plotter.update_plot(synthesis_vals[:,:,0])
         if True or t % 5 == 0:
             print ("%d) Cost: %.3f, SNR: %.2fdB" % (t, cost, snr(x_batch, x_hat_vals)))
