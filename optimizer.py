@@ -14,6 +14,7 @@ parser.add_option("-l", "--load_filters", action='store_true', dest="load",
 
 class Model():
     n_input = 128
+    n_filter_width = n_input
     n_filters = 128
     n_batch_size = 640
     n_runs = 2 ** 16
@@ -52,7 +53,7 @@ with tf.Session() as sess:
     noise = np.zeros((n_batch_size, n_filters))
     plotter = Plotter(model)
     if plot_bf:
-        plotter.setup_plot_bf2()
+        plotter.setup_plot()
 
     x_batch = np.zeros((n_batch_size, n_input))
     for t in range(model.n_runs):
@@ -73,6 +74,6 @@ with tf.Session() as sess:
             save_data(x_batch, x_hat_vals, analysis_vals, synthesis_vals)
             print ("Data saved | Mean(u)=%.2f" % (np.sum(np.mean(np.abs(u_vals), axis=0))))
         if plot_bf and t % 1000 == 0:
-            plotter.update_plot_bf2(synthesis_vals)
+            plotter.update_plot(synthesis_vals)
         if t % 5 == 0:
             print ("%d) Cost: %.3f, SNR: %.2fdB" % (t, cost, snr(x_batch, x_hat_vals)))

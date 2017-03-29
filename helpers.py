@@ -5,8 +5,9 @@ import pdb
 import matplotlib.pyplot as plt
 
 def get_learning_rate(t):
-    learning_rate = 2e-9
-    bounds = [1e5 * (2 ** i) for i in range(10)]
+    learning_rate = 5e-11
+    #learning_rate = 2e-13
+    bounds = [100 * (2 ** i) for i in range(10)]
     for bound in bounds:
         if t < bound:
             break
@@ -22,6 +23,18 @@ def snr(x_batch, x_hat_vals):
     mse = (R ** 2).mean()
     snr = 10 * np.log10(var/mse)
     return snr
+
+def construct_batch(n_input, n_filter_width, n_batch_size):
+    base = 'data/lewicki_audiodata'
+    wav_files = glob.glob('%s/mammals/*.wav' % base)
+
+    x_batch = np.zeros((n_batch_size, n_input, 1))
+    for i in range(n_batch_size):
+        wfile = np.random.choice(wav_files)
+        Fs, x_raw = wavfile.read(wfile)
+        start = np.random.randint(x_raw.shape[0] - n_input)
+        x_batch[i,:,0] = x_raw[start:start+n_input]
+    return x_batch
 
 def construct_data(source, N, sz):
     X = np.zeros((N, sz))
@@ -56,26 +69,41 @@ def construct_data(source, N, sz):
         X[i,:] = x_raw[start:start+sz]
     return X
 
-def load_weights(sess, analysis_ph, synthesis_ph):
+def load_weights_impl(sess, analysis_ph, synthesis_ph, conv=True):
     print ('loading weights')
-    assign_analysis = analysis_ph.assign(np.load('saved/filters/analysis.npy'))
-    assign_synthesis = synthesis_ph.assign(np.load('saved/filters/synthesis.npy'))
+    base = 'saved/%sfilters' % ("conv_" if conv else "")
+    assign_analysis = analysis_ph.assign(np.load('%s/analysis.npy' % base))
+    assign_synthesis = synthesis_ph.assign(np.load('%s/synthesis.npy' % base))
     sess.run(assign_analysis)
     sess.run(assign_synthesis)
 
+def load_weights(sess, analysis_ph, synthesis_ph):
+    return load_weights_impl(sess, analysis_ph, synthesis_ph, False)
+
+def load_weights_conv(sess, analysis_ph, synthesis_ph):
+    return load_weights_impl(sess, analysis_ph, synthesis_ph)
+
+def save_data_impl(x_batch, x_hat_vals, analysis_vals, synthesis_vals, conv=True):
+    base_1 = 'saved/%sfilters' % ("conv_" if conv else "")
+    base_2 = 'saved/%ssamples' % ("conv_" if conv else "")
+    np.save('%s/analysis.npy' % base_1, analysis_vals)
+    np.save('%s/synthesis.npy' % base_1, synthesis_vals)
+    np.save('%s/actual.npy' % base_2, x_batch)
+    np.save('%s/reconstruction.npy' % base_2, x_hat_vals)
+
 def save_data(x_batch, x_hat_vals, analysis_vals, synthesis_vals):
-    np.save('saved/filters/analysis.npy', analysis_vals)
-    np.save('saved/filters/synthesis.npy', synthesis_vals)
-    np.save('saved/samples/actual.npy', x_batch)
-    np.save('saved/samples/reconstruction.npy', x_hat_vals)
+    save_data_impl(x_batch, x_hat_vals, analysis_vals, synthesis_vals, False)
+
+def save_data_conv(x_batch, x_hat_vals, analysis_vals, synthesis_vals):
+    save_data_impl(x_batch, x_hat_vals, analysis_vals, synthesis_vals)
 
 class Plotter():
     def __init__(self, model):
         self.model = model
 
-    def setup_plot_bf2(self):
+    def setup_plot(self):
         #num_rows, num_cols = 16,8
-        num_rows, num_cols = 8,4
+        num_rows, num_cols = 6,4
 
         #figure, axes = plt.subplots(num_rows, num_cols, figsize=(26,14))
         figure, axes = plt.subplots(num_rows, num_cols, figsize=(14,7))
@@ -84,7 +112,7 @@ class Plotter():
         plots = []
         for i in range(num_rows):
             for j in range(num_cols):
-                plots.append(axes[i,j].plot(np.zeros(self.model.n_input))[0])
+                plots.append(axes[i,j].plot(np.zeros(self.model.n_filter_width))[0])
                 axes[i,j].set_ylim([-0.6,0.6])
                 axes[i,j].xaxis.set_visible(False)
                 axes[i,j].yaxis.set_visible(False)
@@ -93,7 +121,7 @@ class Plotter():
         self.plots = plots
         plt.show(block=False)
 
-    def update_plot_bf2(self, synthesis):
+    def update_plot(self, synthesis):
         n_input = synthesis.shape[0]
         for k in range(len(self.plots)):
             self.plots[k].set_data(range(n_input), synthesis[:,k])
