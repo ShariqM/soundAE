@@ -10,6 +10,8 @@ from optparse import OptionParser
 parser = OptionParser()
 parser.add_option("-l", "--load_filters", action='store_true', dest="load",
                   default=False)
+parser.add_option("-v", "--visualizer", action='store_true', dest="plot_bf",
+                  default=False)
 (opt, args) = parser.parse_args()
 
 class Model():
@@ -18,17 +20,27 @@ class Model():
     n_filters = 128
     n_batch_size = 640
     n_runs = 2 ** 16
-    Lambda = 4000.0
+    Lambda = 4.0
 
+    start_rate = 1e-3
+    start_num_iters = 1e5
+
+    #n_rows_bf = 8
+    #n_cols_bf = 4
+    #n_height_bf = 5
+    #n_width_bf = 10
     n_rows_bf = 16
     n_cols_bf = 8
-    n_height_bf = 11
-    n_width_bf = 23
+    n_height_bf = 9
+    n_width_bf = 16
+
+    norm_factor = 1
 
 def get_learning_rate(t):
-    start_rate = 2e-9
-    start_num_iters = 1e5
-    return get_learning_rate_impl(t, start_rate, start_num_iters)
+    #start_rate = 4e-3
+    return get_learning_rate_impl(t, model.start_rate, model.start_num_iters)
+    #start_num_iters = 1e5
+    #return get_learning_rate_impl(t, start_rate, start_num_iters)
 
 model = Model()
 
@@ -43,18 +55,19 @@ u_ph = auto_encoder.encode(x_ph, n_ph)
 x_hat_ph = auto_encoder.decode(u_ph)
 
 cost_op = tf.reduce_sum(tf.reduce_mean(tf.square(x_target_ph - x_hat_ph), axis=0)) + model.Lambda * tf.reduce_sum(tf.reduce_mean(tf.abs(u_ph), axis=0))
-init_op = tf.global_variables_initializer()
 
 analysis_ph, synthesis_ph = auto_encoder.get_filters_ph()
 norm_s_op = synthesis_ph.assign(tf.nn.l2_normalize(synthesis_ph, 0))
 
 learning_rate_ph = tf.placeholder(tf.float32, shape=[])
-optimizer = tf.train.GradientDescentOptimizer(learning_rate_ph).minimize(cost_op)
+train_op = tf.train.GradientDescentOptimizer(learning_rate_ph).minimize(cost_op)
+#train_op = tf.train.AdamOptimizer(model.start_rate).minimize(cost_op)
 
-N = 4000
-data = construct_data("mammals", N, n_input)
+N = 32000
+data = construct_data("mix", N, n_input)
+#data = construct_data("mammals", N, n_input)
 
-plot_bf  = True # Use ipython optimizer.py --pylab=tk for remote host, ipython for local
+init_op = tf.global_variables_initializer()
 with tf.Session() as sess:
     sess.run(init_op)
     if opt.load:
@@ -62,7 +75,7 @@ with tf.Session() as sess:
 
     noise = np.zeros((n_batch_size, n_filters))
     plotter = Plotter(model)
-    if plot_bf:
+    if opt.plot_bf:
         plotter.setup_plot()
 
     x_batch = np.zeros((n_batch_size, n_input))
@@ -75,7 +88,7 @@ with tf.Session() as sess:
                      learning_rate_ph: get_learning_rate(t)}
 
         analysis_vals, synthesis_vals, u_vals, x_hat_vals, cost, _ = \
-            sess.run([analysis_ph, synthesis_ph, u_ph, x_hat_ph, cost_op, optimizer], \
+            sess.run([analysis_ph, synthesis_ph, u_ph, x_hat_ph, cost_op, train_op], \
                 feed_dict=feed_dict)
 
         sess.run(norm_s_op)
@@ -83,7 +96,7 @@ with tf.Session() as sess:
         if (t+1) % 25 == 0:
             save_data(x_batch, x_hat_vals, analysis_vals, synthesis_vals)
             print ("Data saved | Mean(u)=%.2f" % (np.sum(np.mean(np.abs(u_vals), axis=0))))
-        if plot_bf and t % 500 == 0:
-            plotter.update_plot(synthesis_vals)
+        if opt.plot_bf and t % 500 == 0:
+            plotter.update_plot(analysis_vals, synthesis_vals)
         if t % 5 == 0:
             print ("%d) Cost: %.3f, SNR: %.2fdB" % (t, cost, snr(x_batch, x_hat_vals)))

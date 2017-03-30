@@ -98,6 +98,8 @@ with tf.Session() as sess:
         v_vals, a_vals, x_hat_vals, cost, grad_val,  _ = \
             sess.run([v_ph, a_ph, x_hat_ph, cost_op, grad_op, optimizer], feed_dict)
 
+        analysis_grad = grad_val[0][0]
+        synthesis_grad = grad_val[1][0]
         print ('Mean Grad Val:', np.mean((np.abs(grad_val[0][0]))))
         #pdb.set_trace()
         if opt.plot_LIF:

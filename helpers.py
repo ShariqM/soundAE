@@ -25,14 +25,18 @@ def snr(x_batch, x_hat_vals):
 
 def construct_batch(n_input, n_filter_width, n_batch_size, norm=False):
     base = 'data/lewicki_audiodata'
-    wav_files = glob.glob('%s/mammals/*.wav' % base)
+    #wav_files = glob.glob('%s/mammals/*.wav' % base)
+    wf1 = glob.glob('%s/envsounds/*.wav' % base)
+    wf2 = glob.glob('%s/mammals/*.wav' % base)
+    ratio = int(np.ceil(2*len(wf2)/len(wf1))) # 2 to 1 (env to mammals)
+    wav_files = wf1 * ratio + wf2
 
     x_batch = np.zeros((n_batch_size, n_input, 1))
     for i in range(n_batch_size):
         wfile = np.random.choice(wav_files)
         Fs, x_raw = wavfile.read(wfile)
         start = np.random.randint(x_raw.shape[0] - n_input)
-        x_batch[i,:,0] = x_raw[start:start+n_input]
+        x_batch[i,:,0] = x_raw[start:start+n_input] / 100
         if norm:
             x_batch[i,:,0] /= np.max(np.abs(x_batch[i,:,0]))
     return x_batch
@@ -67,7 +71,7 @@ def construct_data(source, N, sz):
         #print ("1", timer() - start) if perf else: pass
 
         start = np.random.randint(len(x_raw) - sz)
-        X[i,:] = x_raw[start:start+sz]
+        X[i,:] = x_raw[start:start+sz] / 1000
     return X
 
 def load_weights_impl(sess, analysis_ph, synthesis_ph, conv=True):
@@ -101,33 +105,46 @@ def save_data_conv(x_batch, x_hat_vals, analysis_vals, synthesis_vals):
 class Plotter():
     def __init__(self, model):
         self.model = model
+        self.figures = []
+        self.plots = []
 
     def setup_plot(self):
-        n_rows, n_cols = self.model.n_rows_bf, self.model.n_cols_bf
+        for t in range(2):
+            n_rows, n_cols = self.model.n_rows_bf, self.model.n_cols_bf
 
-        n_height, n_width = self.model.n_height_bf, self.model.n_width_bf
-        figure, axes = plt.subplots(n_rows, n_cols, figsize=(n_width, n_height))
+            n_height, n_width = self.model.n_height_bf, self.model.n_width_bf
+            figure, axes = plt.subplots(n_rows, n_cols, figsize=(n_width, n_height))
+            #plt.title("Analysis" if t == 0 else "Synthesis")
 
-        k = 0
-        plots = []
-        for i in range(n_rows):
-            for j in range(n_cols):
-                plots.append(axes[i,j].plot(np.zeros(self.model.n_filter_width))[0])
-                axes[i,j].set_ylim([-0.4,0.4])
-                axes[i,j].xaxis.set_visible(False)
-                axes[i,j].yaxis.set_visible(False)
-                k = k + 1
-        self.figure = figure
-        self.plots = plots
-        plt.show(block=False)
+            k = 0
+            plots = []
+            for i in range(n_rows):
+                for j in range(n_cols):
+                    plots.append(axes[i,j].plot(np.zeros(self.model.n_filter_width))[0])
+                    if t == 0:
+                        g = (50 / self.model.n_filter_width) * self.model.norm_factor
+                        axes[i,j].set_ylim([-g,g])
+                    else:
+                        axes[i,j].set_ylim([-0.4,0.4])
+                    axes[i,j].xaxis.set_visible(False)
+                    axes[i,j].yaxis.set_visible(False)
+                    k = k + 1
+            plt.tight_layout()
+            self.figures.append(figure)
+            self.plots.append(plots)
+            plt.show(block=False)
 
-    def update_plot(self, synthesis):
-        n_input = synthesis.shape[0]
-        n_plots = min(len(self.plots), synthesis.shape[1])
-        for k in range(n_plots):
-            self.plots[k].set_data(range(n_input), synthesis[:,k])
-        self.figure.canvas.draw()
-        plt.show(block=False)
+    def update_plot(self, analysis, synthesis):
+        for t, filters in enumerate((analysis, synthesis)):
+            figure = self.figures[t]
+            plots = self.plots[t]
+
+            n_input = filters.shape[0]
+            n_plots = min(len(plots), filters.shape[1])
+            for k in range(n_plots):
+                plots[k].set_data(range(n_input), filters[:,k])
+            figure.canvas.draw()
+            plt.show(block=False)
 
     def setup_plot_LIF(self):
         n_filters = self.model.n_filters

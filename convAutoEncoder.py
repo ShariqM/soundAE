@@ -2,6 +2,7 @@ import tensorflow as tf
 import pdb
 
 def init_encode_weights(n_filter_width, n_filters):
+    #return tf.zeros((n_filter_width, 1, n_filters))
     return tf.truncated_normal((n_filter_width, 1, n_filters), 0.0,
             1/tf.sqrt(tf.cast(n_filters + n_filter_width, tf.float32)))
 
@@ -28,12 +29,13 @@ class ConvAutoEncoder(object):
         return tf.sigmoid(x - self.threshold) + \
             tf.stop_gradient(self.spike_activation_impl(x) - tf.sigmoid(x - self.threshold))
 
-    def encode(self, x_input):
+    def encode(self, x_input, noise):
         u = tf.nn.conv1d(x_input, self.A, 1, padding='SAME')
+        r = u + noise
         #u = tf.nn.relu(u)
-        u = self.spike_activation(u)
-        return u
+        #u = self.spike_activation(u)
+        return u, r
 
-    def decode(self, u):
-        x_hat = tf.nn.conv1d(u, self.S, 1, padding='SAME')
+    def decode(self, r):
+        x_hat = tf.nn.conv1d(r, self.S, 1, padding='SAME')
         return x_hat

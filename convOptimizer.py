@@ -13,41 +13,72 @@ parser.add_option("-l", "--load_filters", action='store_true', dest="load",
 parser.add_option("-v", "--visualizer", action='store_true', dest="plot_bf",
                   default=False)
 (opt, args) = parser.parse_args()
-#opt.load = True
-#opt.plot_bf = True
+#opt.load = False
+#opt.plot_bf = False
 
 class Model():
-    n_input = 2 ** 10 # 2 * 14700
+    n_input = 2 ** 10
     n_filter_width = 128
-    #n_filters = int(0.2 * 128) # Got to 7-8dB with linear, no sparsity
-    #n_filters = 128
-    n_filters = 2 ** 11
+    n_filters = 256
     n_batch_size = 128
     n_runs = 2 ** 16
-    Lambda = 0000.0
+    Lambda = 4000
+
+    start_rate = 1e-3
+    start_num_iters = 200
+
+    neuron_entropy = 128 # units of bits/sample
+    kill_noise = False
+
+    #n_rows_bf = 16
+    #n_cols_bf = 8
+    #n_height_bf = 9
+    #n_width_bf = 20
+    n_rows_bf = 6
+    n_cols_bf = 8
+    n_height_bf = 9
+    n_width_bf = 16
+
+    norm_factor = 0.1
+
+def get_learning_rate(t):
+    return get_learning_rate_impl(t, model.start_rate, model.start_num_iters)
 
 model = Model()
 
-n_input, n_filter_width, n_filters, n_batch_size, n_runs = model.n_input, model.n_filter_width, model.n_filters, model.n_batch_size, model.n_runs
+n_input, n_filter_width, n_filters, n_batch_size, n_runs = \
+    model.n_input, model.n_filter_width, model.n_filters, model.n_batch_size, model.n_runs
 auto_encoder = ConvAutoEncoder(model)
+# Cost = MSE + L1
 
 x_ph = tf.placeholder(tf.float32, shape=[n_batch_size, n_input, 1], name="input.data")
+n_ph = tf.placeholder(tf.float32, shape=[n_batch_size, n_input, n_filters], name="noise")
 x_target_ph = tf.placeholder(tf.float32, shape=[n_batch_size, n_input, 1], name="x_target")
 
-u_ph = auto_encoder.encode(x_ph)
-x_hat_ph = auto_encoder.decode(u_ph)
+u_ph, r_ph = auto_encoder.encode(x_ph, n_ph)
+x_hat_ph = auto_encoder.decode(r_ph)
 
 #cost_op = tf.reduce_sum(tf.reduce_mean(tf.square(x_target_ph - x_hat_ph), axis=0)) + model.Lambda * tf.reduce_sum(tf.reduce_mean(tf.abs(u_ph), axis=0))
 cost_op = tf.reduce_mean(tf.square(x_target_ph - x_hat_ph)) + \
-            model.Lambda * tf.reduce_mean(tf.abs(u_ph))
-init_op = tf.global_variables_initializer()
+            model.Lambda * tf.reduce_mean(tf.log(1 + u_ph ** 2))
+#cost_op = tf.reduce_mean(tf.square(x_target_ph - x_hat_ph)) + \
+            #model.Lambda * tf.reduce_mean(tf.abs(u_ph))
 
 analysis_ph, synthesis_ph = auto_encoder.get_filters_ph()
+norm_a_op = analysis_ph.assign(tf.nn.l2_normalize(analysis_ph, 0) * model.norm_factor)
 norm_s_op = synthesis_ph.assign(tf.nn.l2_normalize(synthesis_ph, 0))
+#norm_a_op = analysis_ph.assign(tf.nn.l2_normalize(analysis_ph, 0) / n_filters)
+#norm_s_op = synthesis_ph.assign(tf.nn.l2_normalize(synthesis_ph, 0) / n_filters)
 
 learning_rate_ph = tf.placeholder(tf.float32, shape=[])
-optimizer = tf.train.GradientDescentOptimizer(learning_rate_ph).minimize(cost_op)
+#train_op = tf.train.GradientDescentOptimizer(learning_rate_ph).minimize(cost_op)
+#train_op = tf.train.AdamOptimizer(learning_rate_ph).minimize(cost_op)
+train_op = tf.train.AdamOptimizer(model.start_rate).minimize(cost_op)
+grad_op  = tf.train.GradientDescentOptimizer(learning_rate_ph).compute_gradients(cost_op)
 
+import datetime
+start = datetime.datetime.now()
+init_op = tf.global_variables_initializer()
 with tf.Session() as sess:
     sess.run(init_op)
     if opt.load:
@@ -58,23 +89,41 @@ with tf.Session() as sess:
     if opt.plot_bf:
         plotter.setup_plot()
 
+    u_var = 200
+    denom = 2 ** (2 * model.neuron_entropy) - 1
     x_batch = np.zeros((n_batch_size, n_input))
+    noise_batch = np.zeros((n_batch_size, n_input, n_filters))
     for t in range(model.n_runs):
         x_batch = construct_batch(n_input, n_filter_width, n_batch_size)
+        if not model.kill_noise:
+            noise_batch = np.random.normal(0, np.sqrt(u_var/denom), (n_batch_size, n_input, n_filters))
 
-        feed_dict = {x_ph: x_batch, x_target_ph: x_batch, \
+        feed_dict = {x_ph: x_batch, n_ph: noise_batch, x_target_ph: x_batch, \
                      learning_rate_ph: get_learning_rate(t)}
 
-        analysis_vals, synthesis_vals, u_vals, x_hat_vals, cost, _ = \
-            sess.run([analysis_ph, synthesis_ph, u_ph, x_hat_ph, cost_op, optimizer], \
+        u_vals, r_vals, x_hat_vals, cost, grad_vals, _ = \
+            sess.run([u_ph, r_ph, x_hat_ph, cost_op, grad_op, train_op], \
                 feed_dict=feed_dict)
+        #print ("u_var",
+        u_var = np.mean(u_vals ** 2)
 
+        analysis_grad = grad_vals[0][0]
+        synthesis_grad = grad_vals[1][0]
+        sess.run(norm_a_op)
         #sess.run(norm_s_op)
+        analysis_vals, synthesis_vals = sess.run([analysis_ph, synthesis_ph])
+        #model.start_rate = 0.1/(np.max(np.abs(analysis_grad)))
+        #print ("Rate: ", model.start_rate)
 
-        if (t+1) % 25 == 0:
+        if t > 0 and t % 25 == 0:
             save_data_conv(x_batch, x_hat_vals, analysis_vals, synthesis_vals)
-            print ("Data saved | Mean(u)=%.2f" % (np.mean(np.abs(u_vals))))
-        if opt.plot_bf and t % 50 == 0:
-            plotter.update_plot(synthesis_vals[:,:,0])
-        if True or t % 5 == 0:
-            print ("%d) Cost: %.3f, SNR: %.2fdB" % (t, cost, snr(x_batch, x_hat_vals)))
+            print ("Data saved")
+        if opt.plot_bf and t % 5 == 0:
+            print ("Updating")
+            plotter.update_plot(analysis_vals[:,0,:], synthesis_vals[:,:,0])
+        if t % 5 == 0:
+            elapsed = (datetime.datetime.now() - start).seconds
+            #mean_u = np.mean(np.abs(u_vals))
+            mean_u = np.mean(np.log(1 + u_vals ** 2))
+            print ("%d) T=%ds Cost: %.3f, SNR: %.2fdB, Mean(u)=%.2f, U_VAR: %.2f" % \
+                (t, elapsed, cost, snr(x_batch, x_hat_vals), mean_u, u_var))
