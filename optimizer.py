@@ -62,6 +62,8 @@ norm_s_op = synthesis_ph.assign(tf.nn.l2_normalize(synthesis_ph, 0))
 learning_rate_ph = tf.placeholder(tf.float32, shape=[])
 train_op = tf.train.GradientDescentOptimizer(learning_rate_ph).minimize(cost_op)
 #train_op = tf.train.AdamOptimizer(model.start_rate).minimize(cost_op)
+#train_op = tf.train.AdagradOptimizer(model.start_rate).minimize(cost_op)
+#train_op = tf.train.AdadeltaOptimizer(model.start_rate).minimize(cost_op)
 
 N = 32000
 data = construct_data("mix", N, n_input)
