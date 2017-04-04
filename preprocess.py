@@ -20,15 +20,18 @@ def butter_bandpass_filter(data, lowcut, highcut, Fs, order=5):
 
 # Sample rate and desired cutoff frequencies (in Hz).
 Fs = 25000.0
-lowcut = 100.0 # 250=100Hz | 6000=60 * 250 = 2500 * 6 = 15000
+lowcut = 250.0 # 250=100Hz | 6000=60 * 250 = 2500 * 6 = 15000
 highcut = 10000.0
 
 i = 0
-wav_files = glob.glob('data/wavs/s1/*.wav')
+wav_files = glob.glob('data/wavs/s*/*.wav')
 for wav_file in wav_files:
-    Fs, x = wavfile.read(wav_file)
-    x_new = butter_bandpass_filter(x, lowcut, highcut, Fs, order=6)
-    fold = wav_file.split('/')[-2] + '.1'
-    name = wav_file.split('/')[-1]
-    #print ('data/wavs/s1.1/%s' % name, Fs, x.astype(np.int16))
-    wavfile.write('data/wavs/%s/%s' % (fold, name), Fs, x.astype(np.int16))
+    try:
+        Fs, x = wavfile.read(wav_file)
+        x_new = butter_bandpass_filter(x, lowcut, highcut, Fs, order=6)
+        fold = wav_file.split('/')[-2] + '.1'
+        name = wav_file.split('/')[-1]
+        #print ('data/wavs/s1.1/%s' % name, Fs, x.astype(np.int16))
+        wavfile.write('data/wavs/%s/%s' % (fold, name), Fs, x.astype(np.int16))
+    except Exception as e:
+        pass

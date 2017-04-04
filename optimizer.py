@@ -12,17 +12,19 @@ parser.add_option("-l", "--load_filters", action='store_true', dest="load",
                   default=False)
 parser.add_option("-v", "--visualizer", action='store_true', dest="plot_bf",
                   default=False)
+parser.add_option("-d", "--data_source", dest="data",
+                  default="mix", help="Data source (mix, grid)")
 (opt, args) = parser.parse_args()
 
 class Model():
-    n_input = 250
+    n_input = 128
     n_filter_width = n_input
     n_filters = n_input
     n_batch_size = 640
     n_runs = 2 ** 16
-    Lambda = 4.0
+    Lambda = 8.0
 
-    start_rate = 1e-3
+    start_rate = 2e-3
     start_num_iters = 1e5
 
     n_rows_bf = 8
@@ -65,8 +67,8 @@ train_op = tf.train.GradientDescentOptimizer(learning_rate_ph).minimize(cost_op)
 #train_op = tf.train.AdagradOptimizer(model.start_rate).minimize(cost_op)
 #train_op = tf.train.AdadeltaOptimizer(model.start_rate).minimize(cost_op)
 
-N = 32000
-data = construct_data("mix", N, n_input)
+N = 2 ** 14
+data = construct_data(opt.data, N, n_input)
 #data = construct_data("mammals", N, n_input)
 
 init_op = tf.global_variables_initializer()

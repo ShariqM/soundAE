@@ -31,7 +31,7 @@ def construct_batch(n_input, n_filter_width, n_batch_size, norm=False):
     ratio = int(np.ceil(2*len(wf2)/len(wf1))) # 2 to 1 (env to mammals)
     wav_files = wf1 * ratio + wf2
 
-    #wav_files = glob.glob('data/wavs/s1/*.wav')
+    wav_files = glob.glob('data/wavs/s*.1/*.wav')
 
     x_batch = np.zeros((n_batch_size, n_input, 1))
     for i in range(n_batch_size):
@@ -58,14 +58,14 @@ def construct_data(source, N, sz):
         wf2 = glob.glob('%s/mammals/*.wav' % base)
         ratio = int(np.ceil(2*len(wf2)/len(wf1))) # 2 to 1 (env to mammals)
         wav_files = wf1 * ratio + wf2
+    elif source == "grid":
+        wav_files = glob.glob('data/wavs/s*.1/*.wav')
     elif source == "white":
         for i in range(N):
             X[i,:] = np.random.randn(sz)
         return X
     else:
         raise Exception("Unknown data source: %s" % source)
-
-    wav_files = glob.glob('data/wavs/*/*.wav')
 
     perf = False
     for i in range(N):
