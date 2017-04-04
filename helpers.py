@@ -23,29 +23,7 @@ def snr(x_batch, x_hat_vals):
     snr = 10 * np.log10(var/mse)
     return snr
 
-def construct_batch(n_input, n_filter_width, n_batch_size, norm=False):
-    base = 'data/lewicki_audiodata'
-    #wav_files = glob.glob('%s/mammals/*.wav' % base)
-    wf1 = glob.glob('%s/envsounds/*.wav' % base)
-    wf2 = glob.glob('%s/mammals/*.wav' % base)
-    ratio = int(np.ceil(2*len(wf2)/len(wf1))) # 2 to 1 (env to mammals)
-    wav_files = wf1 * ratio + wf2
-
-    wav_files = glob.glob('data/wavs/s*.1/*.wav')
-
-    x_batch = np.zeros((n_batch_size, n_input, 1))
-    for i in range(n_batch_size):
-        wfile = np.random.choice(wav_files)
-        Fs, x_raw = wavfile.read(wfile)
-        start = np.random.randint(x_raw.shape[0] - n_input)
-        x_batch[i,:,0] = x_raw[start:start+n_input] / 100
-        if norm:
-            x_batch[i,:,0] /= np.max(np.abs(x_batch[i,:,0]))
-    return x_batch
-
-def construct_data(source, N, sz):
-    X = np.zeros((N, sz))
-
+def get_wav_files(source):
     base = 'data/lewicki_audiodata'
     if source == "pitt":
         wav_files = glob.glob('%s/PittSounds/*.wav' % base)
@@ -58,25 +36,32 @@ def construct_data(source, N, sz):
         wf2 = glob.glob('%s/mammals/*.wav' % base)
         ratio = int(np.ceil(2*len(wf2)/len(wf1))) # 2 to 1 (env to mammals)
         wav_files = wf1 * ratio + wf2
+    elif source == "mix+":
+        wf1 = glob.glob('%s/envsounds/*.wav' % base)
+        wf2 = glob.glob('%s/mammals/*.wav' % base)
+        wf3 = glob.glob('%s/PittSounds/*.wav' % base)
+        wav_files = wf1 + wf2 + wf3
     elif source == "grid":
         wav_files = glob.glob('data/wavs/s*.1/*.wav')
-    elif source == "white":
-        for i in range(N):
-            X[i,:] = np.random.randn(sz)
-        return X
     else:
         raise Exception("Unknown data source: %s" % source)
+    return wav_files
 
-    perf = False
-    for i in range(N):
+def construct_data(source, n_batch_size, n_input):
+    divide_by = 1000
+    x_batch = np.zeros((n_batch_size, n_input))
+    wav_files = get_wav_files(source)
+    for i in range(n_batch_size):
         wfile = np.random.choice(wav_files)
-        xFs, x_raw = wavfile.read(wfile)
-        #x_raw = resample(x_raw, Fs) # Takes too long for now
-        #print ("1", timer() - start) if perf else: pass
+        Fs, x_raw = wavfile.read(wfile)
 
-        start = np.random.randint(len(x_raw) - sz)
-        X[i,:] = x_raw[start:start+sz] / 1000
-    return X
+        start = np.random.randint(len(x_raw) - n_input)
+        x_batch[i,:] = x_raw[start:start+n_input] / divide_by
+    return x_batch
+
+def construct_conv_batch(source, n_batch_size, n_input):
+    x_batch = construct_data(source, n_batch_size, n_input)
+    return x_batch.reshape(n_batch_size, n_input, 1)
 
 def load_weights_impl(sess, analysis_ph, synthesis_ph, conv=True):
     print ('loading weights')

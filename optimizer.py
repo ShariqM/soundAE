@@ -22,9 +22,9 @@ class Model():
     n_filters = n_input
     n_batch_size = 640
     n_runs = 2 ** 16
-    Lambda = 8.0
+    Lambda = 8
 
-    start_rate = 2e-3
+    start_rate = 1e-3
     start_num_iters = 1e5
 
     n_rows_bf = 8

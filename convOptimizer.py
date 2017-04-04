@@ -12,6 +12,8 @@ parser.add_option("-l", "--load_filters", action='store_true', dest="load",
                   default=False)
 parser.add_option("-v", "--visualizer", action='store_true', dest="plot_bf",
                   default=False)
+parser.add_option("-d", "--data_source", dest="data",
+                  default="mix+", help="Data source (mix, grid)")
 (opt, args) = parser.parse_args()
 #opt.load = False
 #opt.plot_bf = False
@@ -41,7 +43,7 @@ class Model():
     # Somehow making this smaller leads to better reconstructions everything else fixed....
     #norm_factor = 0.025
     u_var = 2
-    norm_factor = 0.025
+    norm_factor = 0.1
 
 def get_learning_rate(t):
     return get_learning_rate_impl(t, model.start_rate, model.start_num_iters)
@@ -98,7 +100,7 @@ with tf.Session() as sess:
     x_batch = np.zeros((n_batch_size, n_input))
     noise_batch = np.zeros((n_batch_size, n_input, n_filters))
     for t in range(model.n_runs):
-        x_batch = construct_batch(n_input, n_filter_width, n_batch_size)
+        x_batch = construct_conv_batch(opt.data, n_batch_size, n_input)
         if not model.kill_noise:
             noise_batch = np.random.normal(0, np.sqrt(model.u_var/denom), (n_batch_size, n_input, n_filters))
 
@@ -111,11 +113,11 @@ with tf.Session() as sess:
         #print ("u_var",
         uu_var = np.mean(u_vals ** 2)
 
-        figure, ax = plt.subplots(2,1)
-        ax[0].imshow(u_vals[0,:,:].T, interpolation='none')
-        ax[0].set_aspect('auto') # Fill y-axis
-        ax[1].plot(x_batch[0,:,0])
-        plt.show(block=True)
+        #figure, ax = plt.subplots(2,1)
+        #ax[0].imshow(u_vals[0,:,:].T, interpolation='none')
+        #ax[0].set_aspect('auto') # Fill y-axis
+        #ax[1].plot(x_batch[0,:,0])
+        #plt.show(block=True)
 
         analysis_grad = grad_vals[0][0]
         synthesis_grad = grad_vals[1][0]
