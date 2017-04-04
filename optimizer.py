@@ -15,9 +15,9 @@ parser.add_option("-v", "--visualizer", action='store_true', dest="plot_bf",
 (opt, args) = parser.parse_args()
 
 class Model():
-    n_input = 128
+    n_input = 250
     n_filter_width = n_input
-    n_filters = 128
+    n_filters = n_input
     n_batch_size = 640
     n_runs = 2 ** 16
     Lambda = 4.0
@@ -25,14 +25,14 @@ class Model():
     start_rate = 1e-3
     start_num_iters = 1e5
 
-    #n_rows_bf = 8
-    #n_cols_bf = 4
-    #n_height_bf = 5
-    #n_width_bf = 10
-    n_rows_bf = 16
-    n_cols_bf = 8
-    n_height_bf = 9
-    n_width_bf = 16
+    n_rows_bf = 8
+    n_cols_bf = 4
+    n_height_bf = 5
+    n_width_bf = 10
+    #n_rows_bf = 16
+    #n_cols_bf = 8
+    #n_height_bf = 9
+    #n_width_bf = 16
 
     norm_factor = 1
 
@@ -99,6 +99,6 @@ with tf.Session() as sess:
             save_data(x_batch, x_hat_vals, analysis_vals, synthesis_vals)
             print ("Data saved | Mean(u)=%.2f" % (np.sum(np.mean(np.abs(u_vals), axis=0))))
         if opt.plot_bf and t % 500 == 0:
-            plotter.update_plot(analysis_vals, synthesis_vals)
+            plotter.update_plot(analysis_vals, synthesis_vals, skip_synth=False)
         if t % 5 == 0:
             print ("%d) Cost: %.3f, SNR: %.2fdB" % (t, cost, snr(x_batch, x_hat_vals)))

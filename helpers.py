@@ -31,6 +31,8 @@ def construct_batch(n_input, n_filter_width, n_batch_size, norm=False):
     ratio = int(np.ceil(2*len(wf2)/len(wf1))) # 2 to 1 (env to mammals)
     wav_files = wf1 * ratio + wf2
 
+    #wav_files = glob.glob('data/wavs/s1/*.wav')
+
     x_batch = np.zeros((n_batch_size, n_input, 1))
     for i in range(n_batch_size):
         wfile = np.random.choice(wav_files)
@@ -62,6 +64,8 @@ def construct_data(source, N, sz):
         return X
     else:
         raise Exception("Unknown data source: %s" % source)
+
+    wav_files = glob.glob('data/wavs/*/*.wav')
 
     perf = False
     for i in range(N):
@@ -134,8 +138,10 @@ class Plotter():
             self.plots.append(plots)
             plt.show(block=False)
 
-    def update_plot(self, analysis, synthesis):
+    def update_plot(self, analysis, synthesis, skip_synth=True):
         for t, filters in enumerate((analysis, synthesis)):
+            if skip_synth and t > 0:
+                break
             figure = self.figures[t]
             plots = self.plots[t]
 
