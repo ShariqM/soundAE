@@ -48,7 +48,7 @@ def get_wav_files(source):
     return wav_files
 
 def construct_data(source, n_batch_size, n_input):
-    divide_by = 1000
+    divide_by = 100
     x_batch = np.zeros((n_batch_size, n_input))
     wav_files = get_wav_files(source)
     for i in range(n_batch_size):
@@ -58,6 +58,14 @@ def construct_data(source, n_batch_size, n_input):
         start = np.random.randint(len(x_raw) - n_input)
         x_batch[i,:] = x_raw[start:start+n_input] / divide_by
     return x_batch
+
+def construct_conv_data(source, N, model):
+    n_batch_size, n_input = model.n_batch_size, model.n_input
+    x_data = np.zeros((N, n_batch_size, n_input, 1))
+    for i in range(N):
+        x_batch = construct_data(source, n_batch_size, n_input)
+        x_data[i,:,:,:] = x_batch.reshape(n_batch_size, n_input, 1)
+    return x_data
 
 def construct_conv_batch(source, n_batch_size, n_input):
     x_batch = construct_data(source, n_batch_size, n_input)
