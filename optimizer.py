@@ -27,14 +27,14 @@ class Model():
     start_rate = 1e-3
     start_num_iters = 1e5
 
-    n_rows_bf = 8
-    n_cols_bf = 4
-    n_height_bf = 5
-    n_width_bf = 10
-    #n_rows_bf = 16
-    #n_cols_bf = 8
-    #n_height_bf = 9
-    #n_width_bf = 16
+    #n_rows_bf = 8
+    #n_cols_bf = 4
+    #n_height_bf = 5
+    #n_width_bf = 10
+    n_rows_bf = 16
+    n_cols_bf = 8
+    n_height_bf = 9
+    n_width_bf = 16
 
     norm_factor = 1
 

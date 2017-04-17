@@ -48,7 +48,7 @@ def get_wav_files(source):
     return wav_files
 
 def construct_data(source, n_batch_size, n_input):
-    divide_by = 100
+    divide_by = 1000
     x_batch = np.zeros((n_batch_size, n_input))
     wav_files = get_wav_files(source)
     for i in range(n_batch_size):

@@ -10,6 +10,8 @@ from optparse import OptionParser
 from LIFCell import LIFCell
 
 parser = OptionParser()
+parser.add_option("-d", "--data_source", dest="data",
+                  default="mix+", help="Data source (mix, grid)")
 parser.add_option("-l", "--load_filters", action='store_true', dest="load",
                   default=False)
 parser.add_option("-f", "--visualze_filters", action='store_true', dest="plot_bf",
@@ -23,9 +25,9 @@ parser.add_option("-v", "--visualize_LIF", action='store_true', dest="plot_LIF",
 
 class Model():
     n_input = 2 ** 8
-    n_filter_width = 128
-    n_filters = 512
-    n_batch_size = 640
+    n_filter_width = 64
+    n_filters = 32
+    n_batch_size = 16
     n_runs = 2 ** 16
     Lambda = 0000.0
 
@@ -33,7 +35,7 @@ class Model():
     threshold = 30
 
 def get_learning_rate(t):
-    start_rate = 1e-1
+    start_rate = 1e-5
     start_num_iters = 100
     return get_learning_rate_impl(t, start_rate, start_num_iters)
 
@@ -46,23 +48,24 @@ n_input, n_filter_width, n_filters, n_batch_size, n_runs = \
 
 # Input, Output
 x_ph = tf.placeholder(tf.float32, shape=[n_batch_size, n_input, 1], name="input.data")
+n_ph = tf.placeholder(tf.float32, shape=[n_batch_size, n_input, n_filters], name="noise")
 x_target_ph = tf.placeholder(tf.float32, shape=[n_batch_size, n_input, 1], name="x_target")
 
 # Network
 auto_encoder = ConvAutoEncoder(model)
 
 # Encode
-u_ph = auto_encoder.encode(x_ph)
+u_ph, r_ph = auto_encoder.encode(x_ph, n_ph)
 # LIF
 cell_ph = LIFCell(n_filters, model)
-output_ph, _ = tf.nn.dynamic_rnn(cell_ph, u_ph, dtype=tf.float32)
+output_ph, _ = tf.nn.dynamic_rnn(cell_ph, r_ph, dtype=tf.float32)
 v_ph, a_ph = array_ops.split(output_ph, 2, axis=2)
 # Decode
 x_hat_ph = auto_encoder.decode(a_ph)
 
 # Cost, Optimization
 cost_op = tf.reduce_mean(tf.square(x_target_ph - x_hat_ph)) + \
-            model.Lambda * tf.reduce_mean(tf.abs(u_ph))
+            model.Lambda * tf.reduce_mean(tf.abs(r_ph))
 learning_rate_ph = tf.placeholder(tf.float32, shape=[])
 optimizer = tf.train.GradientDescentOptimizer(learning_rate_ph).minimize(cost_op)
 grad_op  = tf.train.GradientDescentOptimizer(learning_rate_ph).compute_gradients(cost_op)
@@ -70,6 +73,11 @@ grad_op  = tf.train.GradientDescentOptimizer(learning_rate_ph).compute_gradients
 # ops
 init_op = tf.global_variables_initializer()
 analysis_ph, synthesis_ph = auto_encoder.get_filters_ph()
+
+print ("Foo")
+N = 1000
+x_data = construct_conv_data(opt.data, N, model)
+print ("Foo")
 
 with tf.Session() as sess:
     sess.run(init_op)
@@ -88,11 +96,12 @@ with tf.Session() as sess:
         plotter.setup_plot_LIF()
     print ("Setup for runs")
 
-    x_batch = np.zeros((n_batch_size, n_input))
+    noise_batch = np.zeros((n_batch_size, n_input, n_filters))
     for t in range(model.n_runs):
-        x_batch = construct_batch(n_input, n_filter_width, n_batch_size, norm=True)
+        idx = np.random.randint(N)
+        x_batch = x_data[idx,:,:,:]
 
-        feed_dict = {x_ph: x_batch, x_target_ph: x_batch, \
+        feed_dict = {x_ph: x_batch, x_target_ph: x_batch, n_ph: noise_batch, \
                      learning_rate_ph: get_learning_rate(t)}
 
         v_vals, a_vals, x_hat_vals, cost, grad_val,  _ = \
