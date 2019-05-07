@@ -101,6 +101,7 @@ def save_data_conv(x_batch, x_hat_vals, analysis_vals, synthesis_vals):
 
 class Plotter():
     def __init__(self, model):
+        plt.ion()
         self.model = model
         self.figures = []
         self.plots = []
@@ -144,6 +145,99 @@ class Plotter():
                 plots[k].set_data(range(n_input), filters[:,k])
             figure.canvas.draw()
             plt.show(block=False)
+
+    def setup_plot_LIF_2(self, target):
+        figure, axes = plt.subplots(4,2, figsize=(10,8))
+
+        axes[0,0].plot(target)
+        axes[0,0].set_title("Target")
+
+        plots = []
+        axes[1,0].set_title("Reconstruction")
+        #plots.append(axes[1,0].plot(np.zeros(self.model.n_input))[0])
+        plots.append(axes[1,0].plot(target)[0])
+
+        axes[2,0].set_title("Spikes")
+        plots.append(axes[2,0].plot(np.zeros(self.model.n_input))[0])
+        axes[2,0].set_ylim([-1.1, 1.1])
+
+        axes[3,0].set_title("Voltage")
+        plots.append(axes[3,0].plot(np.zeros(self.model.n_input))[0])
+        axes[3,0].set_ylim([0, self.model.threshold * 1.1])
+
+        axes[1,1].set_title("Analysis")
+        plots.append(axes[1,1].plot(np.zeros(self.model.n_filter_width))[0])
+        axes[1,1].set_ylim([-1.1, 1.1])
+
+        axes[2,1].set_title("Synthesis")
+        plots.append(axes[2,1].plot(np.zeros(self.model.n_filter_width))[0])
+        axes[2,1].set_ylim([-1.1, 1.1])
+
+        self.plots = plots
+        self.figure = figure
+        plt.show(block=False)
+
+    def update_plot_LIF_2(self, x_hat_vals, a_vals, v_vals, analysis_vals, synthesis_vals):
+        #self.plots[0].set_data(x_hat_vals))
+        n_input = self.model.n_input
+        n_filter_width = self.model.n_filter_width
+        self.plots[0].set_data(range(n_input), x_hat_vals)
+        self.plots[1].set_data(range(n_input), a_vals)
+        self.plots[2].set_data(range(n_input), v_vals)
+        #pdb.set_trace()
+        #self.plots[3].set_data(range(n_filter_width), np.random.randn(n_filter_width))
+        self.plots[3].set_data(range(n_filter_width), analysis_vals)
+        self.plots[4].set_data(range(n_filter_width), synthesis_vals)
+        self.figure.canvas.draw()
+        plt.show(block=False)
+
+    def setup_plot_LIF_3(self, target):
+        figure, axes = plt.subplots(2,2, figsize=(10,8))
+
+        axes[0,0].plot(target)
+        axes[0,0].set_title("Target")
+
+        plots = []
+        axes[1,0].set_title("Reconstruction")
+        #plots.append(axes[1,0].plot(np.zeros(self.model.n_input))[0])
+        plots.append(axes[1,0].plot(target)[0])
+
+        colors = ['g', 'b', 'r', 'c']
+
+        axes[0,1].set_title("Spikes")
+        for i in range(self.model.n_filters):
+          plots.append(axes[0,1].plot(np.zeros(self.model.n_input),
+                                      color=colors[i])[0])
+        axes[0,1].set_ylim([-0.1, 1.1])
+
+        axes[1,1].set_title("Voltage")
+        for i in range(self.model.n_filters):
+          plots.append(axes[1,1].plot(np.zeros(self.model.n_input),
+                                      color=colors[i])[0])
+
+        axes[1,1].set_ylim([0, self.model.threshold * 1.1])
+
+        self.plots = plots
+        self.figure = figure
+        plt.show(block=False)
+
+    def update_plot_LIF_3(self, x_hat_vals, a_vals, v_vals, analysis_vals, synthesis_vals):
+        #self.plots[0].set_data(x_hat_vals))
+        n_input = self.model.n_input
+        n_filter_width = self.model.n_filter_width
+        self.plots[0].set_data(range(n_input), x_hat_vals)
+
+        for i in range(self.model.n_filters):
+          self.plots[1+i].set_data(range(n_input), a_vals[:, i])
+
+        for i in range(self.model.n_filters):
+          idx = 1+self.model.n_filters+i
+          self.plots[idx].set_data(range(n_input), v_vals[:, i])
+
+        #pdb.set_trace()
+        #self.plots[3].set_data(range(n_filter_width), np.random.randn(n_filter_width))
+        self.figure.canvas.draw()
+        plt.show(block=False)
 
     def setup_plot_LIF(self):
         n_filters = self.model.n_filters
